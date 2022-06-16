@@ -1,33 +1,13 @@
-const path = require("path")
 const express = require("express")
-const morgan = require("morgan")
-const helmet = require("helmet")
-const bodyParser = require("body-parser")
+const schema = require("../db/schema")
+const db = require("../db/connection")
 
-const { notFound, errorHandler } = require("./middlewares")
-
-require("dotenv").config()
-
-const schema = require("./db/schema")
-const db = require("./db/connection")
 const employees = db.get("employees")
 
-const app = express()
-
-app.use(helmet())
-app.use(morgan("dev"))
-app.use(bodyParser.json())
-
-app.use(notFound)
-app.use(errorHandler)
-app.use(express.static(path.resolve(__dirname, "../client/build")))
-
-app.get("/api", (req, res) => {
-  res.json({ message: "Hello from server!" })
-})
+const router = express.Router()
 
 /* Get all employees */
-app.get("/", async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
     const allEmployees = await employees.find({})
     res.json(allEmployees)
@@ -37,7 +17,7 @@ app.get("/", async (req, res, next) => {
 })
 
 /* Get a specific employee */
-app.get("/:id", async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params
     const employee = await employees.findOne({
@@ -56,7 +36,7 @@ app.get("/:id", async (req, res, next) => {
 })
 
 /* Create a new employee */
-app.post("/", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
     const { name, job } = req.body
     const result = await schema.validateAsync({ name, job })
@@ -67,8 +47,8 @@ app.post("/", async (req, res, next) => {
 
     // Employee already exists
     if (employee) {
-      res.status(409) // conflict error
       const error = new Error("Employee already exists")
+      res.status(409) // conflict error
       return next(error)
     }
 
@@ -77,7 +57,6 @@ app.post("/", async (req, res, next) => {
       job,
     })
 
-    console.log("New employee has been created")
     res.status(201).json(newuser)
   } catch (error) {
     next(error)
@@ -85,7 +64,7 @@ app.post("/", async (req, res, next) => {
 })
 
 /* Update a specific employee */
-app.put("/:id", async (req, res, next) => {
+router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params
     const { name, job } = req.body
@@ -103,9 +82,7 @@ app.put("/:id", async (req, res, next) => {
       {
         _id: id,
       },
-      {
-        $set: result,
-      },
+      { $set: result },
       { upsert: true }
     )
 
@@ -116,7 +93,7 @@ app.put("/:id", async (req, res, next) => {
 })
 
 /* Delete a specific employee */
-app.delete("/:id", async (req, res, next) => {
+router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params
     const employee = await employees.findOne({
@@ -132,20 +109,11 @@ app.delete("/:id", async (req, res, next) => {
     })
 
     res.json({
-      message: "Success",
+      message: "Employee has been deleted",
     })
   } catch (error) {
     next(error)
   }
 })
 
-app.use(notFound)
-app.use(errorHandler)
-
-app.get("*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../client/build", "index.html"))
-})
-
-app.listen(PORT, () => {
-  console.log(`Server listening on ${PORT}`)
-})
+module.exports = router
