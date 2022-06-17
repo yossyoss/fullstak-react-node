@@ -38,11 +38,11 @@ router.get("/:id", async (req, res, next) => {
 /* Create a new employee */
 router.post("/", async (req, res, next) => {
   try {
-    const { name, job } = req.body
-    const result = await schema.validateAsync({ name, job })
+    const { firstName, lastName, emailId } = req.body
+    const result = await schema.validateAsync({ firstName, lastName, emailId })
 
     const employee = await employees.findOne({
-      name,
+      firstName,
     })
 
     // Employee already exists
@@ -53,8 +53,9 @@ router.post("/", async (req, res, next) => {
     }
 
     const newuser = await employees.insert({
-      name,
-      job,
+      firstName,
+      lastName,
+      emailId,
     })
 
     res.status(201).json(newuser)
@@ -67,8 +68,8 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params
-    const { name, job } = req.body
-    const result = await schema.validateAsync({ name, job })
+    const { firstName, lastName, emailId } = req.body
+    const result = await schema.validateAsync({ firstName, lastName, emailId })
     const employee = await employees.findOne({
       _id: id,
     })
